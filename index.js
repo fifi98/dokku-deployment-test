@@ -63,13 +63,13 @@ app.post("/pdf2img", async (req, res) => {
       width: 2550,
       height: 3300,
       density: 330,
-      savePath: "./images",
+      // savePath: "./images",
     };
 
     const convert = fromBuffer(pdf.data, baseOptions);
     await convert();
 
-    res.sendFile(__dirname + "/images/untitled.1.png");
+    res.sendFile(__dirname + "/untitled.1.png");
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }
