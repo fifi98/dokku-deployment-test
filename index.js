@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const AWS = require("aws-sdk");
 const { nanoid } = require("nanoid");
 const fileUpload = require("express-fileupload");
+const { fromBuffer } = require("pdf2pic");
 
 const Photo = require("./models/photo");
 
@@ -49,6 +50,26 @@ app.post("/photo", async (req, res) => {
     await new Photo({ name: params.Key }).save();
 
     res.status(200).json({ success: true, key: params.Key });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/pdf2img", async (req, res) => {
+  try {
+    const { pdf } = req.files;
+
+    const baseOptions = {
+      width: 2550,
+      height: 3300,
+      density: 330,
+      savePath: "./images",
+    };
+
+    const convert = fromBuffer(pdf.data, baseOptions);
+    await convert();
+
+    res.sendFile(__dirname + "/images/untitled.1.png");
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }
