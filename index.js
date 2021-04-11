@@ -2,7 +2,11 @@ require("dotenv").config();
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
-const User = require("./models/user");
+const AWS = require("aws-sdk");
+const { nanoid } = require("nanoid");
+const fileUpload = require("express-fileupload");
+
+const Photo = require("./models/photo");
 
 mongoose.connect(process.env.MONGO_URL, {
   useNewUrlParser: true,
@@ -11,13 +15,42 @@ mongoose.connect(process.env.MONGO_URL, {
   useCreateIndex: true,
 });
 
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.S3_REGION,
+});
+
+app.use(fileUpload());
+app.use(express.json());
+
 app.get("/", async (req, res) => {
   try {
-    await new User().save();
-    const count = await User.countDocuments();
-    res.status(200).json({ success: true, count });
+    const photos = await Photo.find();
+    res.status(200).json({ success: true, photos });
   } catch (error) {
-    res.status(400).json({ success: false, error });
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+app.post("/photo", async (req, res) => {
+  try {
+    const { photo } = req.files;
+
+    const params = {
+      Bucket: process.env.S3_BUCKET_NAME,
+      Body: photo.data,
+      Key: `photos/${nanoid()}.jpg`,
+      ACL: "public-read",
+      ContentType: "image/jpeg",
+    };
+
+    await s3.upload(params).promise();
+    await new Photo({ name: params.Key }).save();
+
+    res.status(200).json({ success: true, key: params.Key });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
   }
 });
 
